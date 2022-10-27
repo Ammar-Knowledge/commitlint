@@ -1,0 +1,11 @@
+name: commitlint
+id: ari:cloud:compass:fe16f236-8ecb-4445-8586-5ebd155a2533:component/639c4a85-a7f7-47da-af17-094b43ea6ccc/c6383db1-8528-4ead-b5dc-558518c0c73a
+description: 📓 Lint commit messages
+fields:
+  tier: 4
+links:
+  - type: REPOSITORY
+    name: null
+    url: https://github.com/Ammar-Knowledge/commitlint
+relationships:
+  DEPENDS_ON: []
