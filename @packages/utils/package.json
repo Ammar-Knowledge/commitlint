@@ -1,7 +1,7 @@
 {
   "name": "@commitlint/utils",
   "type": "module",
-  "version": "19.0.0",
+  "version": "19.5.0",
   "description": "Development utilities for @commitlint",
   "private": true,
   "files": [
@@ -44,10 +44,10 @@
     "@types/yargs": "^17.0.29"
   },
   "dependencies": {
-    "execa": "^8.0.1",
     "read-pkg": "^9.0.1",
     "require-from-string": "^2.0.2",
     "tar-fs": "^3.0.5",
+    "tinyexec": "^0.3.0",
     "tmp": "^0.2.1",
     "yargs": "^17.0.0"
   },

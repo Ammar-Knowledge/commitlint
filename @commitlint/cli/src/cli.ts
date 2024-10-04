@@ -15,12 +15,12 @@ import type {
 	UserConfig,
 } from '@commitlint/types';
 import type {Options} from 'conventional-commits-parser';
-import {execa, type ExecaError} from 'execa';
+import {x} from 'tinyexec';
 import yargs, {type Arguments} from 'yargs';
 
 import {CliFlags} from './types.js';
 
-import {CliError} from './cli-error.js';
+import {CliError, ExitCode} from './cli-error.js';
 
 const require = createRequire(import.meta.url);
 
@@ -47,7 +47,8 @@ const cli = yargs(process.argv.slice(2))
 		},
 		config: {
 			alias: 'g',
-			description: 'path to the config file',
+			description:
+				'path to the config file; result code 9 if config is missing',
 			type: 'string',
 		},
 		'print-config': {
@@ -297,20 +298,18 @@ async function main(args: MainArgs): Promise<void> {
 	// If reading from `.git/COMMIT_EDIT_MSG`, strip comments using
 	// core.commentChar from git configuration, falling back to '#'.
 	if (flags.edit) {
-		try {
-			const {stdout} = await execa('git', ['config', 'core.commentChar']);
-			opts.parserOpts.commentChar = stdout.trim() || gitDefaultCommentChar;
-		} catch (e) {
-			const execaError = e as ExecaError;
-			// git config returns exit code 1 when the setting is unset,
-			// don't warn in this case.
-			if (!execaError.failed || execaError.exitCode !== 1) {
-				console.warn(
-					'Could not determine core.commentChar git configuration',
-					e
-				);
-			}
+		const result = x('git', ['config', 'core.commentChar']);
+		const output = await result;
+
+		if (result.exitCode && result.exitCode > 1) {
+			console.warn(
+				'Could not determine core.commentChar git configuration',
+				output.stderr
+			);
 			opts.parserOpts.commentChar = gitDefaultCommentChar;
+		} else {
+			opts.parserOpts.commentChar =
+				output.stdout.trim() || gitDefaultCommentChar;
 		}
 	}
 
@@ -318,6 +317,7 @@ async function main(args: MainArgs): Promise<void> {
 		messages.map((message) => lint(message, loaded.rules, opts))
 	);
 
+	let isRulesEmpty = false;
 	if (Object.keys(loaded.rules).length === 0) {
 		let input = '';
 
@@ -342,6 +342,8 @@ async function main(args: MainArgs): Promise<void> {
 			warnings: [],
 			input,
 		});
+
+		isRulesEmpty = true;
 	}
 
 	const report = results.reduce<{
@@ -380,11 +382,14 @@ async function main(args: MainArgs): Promise<void> {
 
 	if (flags.strict) {
 		if (report.errorCount > 0) {
-			throw new CliError(output, pkg.name, 3);
+			throw new CliError(output, pkg.name, ExitCode.CommitLintError);
 		}
 		if (report.warningCount > 0) {
-			throw new CliError(output, pkg.name, 2);
+			throw new CliError(output, pkg.name, ExitCode.CommitLintWarning);
 		}
+	}
+	if (isRulesEmpty) {
+		throw new CliError(output, pkg.name, ExitCode.CommitlintInvalidArgument);
 	}
 	if (!report.valid) {
 		throw new CliError(output, pkg.name);
